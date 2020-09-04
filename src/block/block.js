@@ -10,7 +10,9 @@ import "./editor.scss";
 import "./style.scss";
 
 import Select from "react-select";
+import { SelectControl } from "@wordpress/components";
 import { FormToggle } from "@wordpress/components";
+import { withSelect } from "@wordpress/data";
 
 const { __ } = wp.i18n; // Import __() from wp.i18n
 const { registerBlockType } = wp.blocks; // Import registerBlockType() from wp.blocks
@@ -49,17 +51,21 @@ registerBlockType("wcw/block-contributors", {
 	icon: "groups", // Block icon from Dashicons → https://developer.wordpress.org/resource/dashicons/.
 	category: "common", // Block category — Group blocks together based on common traits E.g. common, formatting, layout widgets, embed.
 	attributes: {
-		selectByContributor: {
-			type: "boolean",
-			default: false,
-		},
 		contributorApiDataFetched: {
 			type: "boolean",
 			default: false,
 		},
-		tagApiDataFetched: {
-			type: "boolean",
-			default: false,
+		contributorOptions: {
+			type: "array",
+			default: [{ value: 0, label: "Show All" }],
+		},
+		contributors: {
+			type: "array",
+			default: [],
+		},
+		orderby: {
+			type: "array",
+			default: "title",
 		},
 		selectedTags: {
 			type: "array",
@@ -69,18 +75,19 @@ registerBlockType("wcw/block-contributors", {
 			type: "array",
 			default: [{ value: 0, label: "Show All" }],
 		},
-		contributors: {
-			type: "array",
-			default: [],
+		selectByContributor: {
+			type: "boolean",
+			default: false,
 		},
 		tags: {
 			type: "array",
 			default: [],
 		},
-		contributorOptions: {
-			type: "array",
-			default: [{ value: 0, label: "Show All" }],
+		tagApiDataFetched: {
+			type: "boolean",
+			default: false,
 		},
+
 		tagOptions: {
 			type: "array",
 			default: [{ value: 0, label: "Show All" }],
@@ -97,79 +104,26 @@ registerBlockType("wcw/block-contributors", {
 	 * @param {Object} props Props.
 	 * @returns {Mixed} JSX Component.
 	 */
-	edit: (props) => {
-		// Creates a <p class='wp-block-wcw-block-contributors'></p>.
-
-		const { setAttributes } = props;
+	edit: withSelect((select) => {
+		return {
+			contributors: select("core").getEntityRecords("postType", "contributor"),
+		};
+	})(({ contributors, className, attributes, setAttributes }) => {
 		const {
 			contributorOptions,
-			contributorApiDataFetched,
+			orderby,
 			tagOptions,
-			tagApiDataFetched,
 			selectedContributors,
 			selectedTags,
 			selectByContributor,
-		} = props.attributes;
+		} = attributes;
 
-		let dataContributors = [];
-		if (selectedContributors) {
-			dataContributors = selectedContributors.map((contributor) => {
-				return contributor.value;
-			});
+		if (!contributors) {
+			return "Loading...";
 		}
 
-		let dataTags = [];
-		if (selectedTags) {
-			dataTags = selectedTags.map((tag) => {
-				console.log(tag.value);
-				return tag.value;
-			});
-		}
-
-		if (!contributorApiDataFetched) {
-			retrieveContributors().then((c) => {
-				const o = c.map((contrib) => {
-					return {
-						value: contrib.id,
-						label: contrib.title.rendered,
-					};
-				});
-
-				setAttributes({
-					contributorOptions: [...contributorOptions, ...o],
-					contributorApiDataFetched: true,
-					contributors: c,
-				});
-			});
-		}
-		if (!tagApiDataFetched) {
-			retrieveTags().then((t) => {
-				const o = t.map((terg) => {
-					return {
-						value: terg.id,
-						label: terg.name,
-					};
-				});
-
-				setAttributes({
-					tagOptions: [...tagOptions, ...o],
-					tagApiDataFetched: true,
-					tags: t,
-				});
-			});
-		}
-
-		let rest = `${wcwGlobal.rest}wp/v2/contributor`;
-
-		if (selectByContributor) {
-			if (dataContributors.indexOf(0) === -1 && dataContributors.length > 0) {
-				rest = `${rest}?include=${dataContributors.join(",")}`;
-			}
-		} else {
-			if (dataTags.indexOf(0) === -1 && dataTags.length > 0) {
-				console.log(dataTags);
-				rest = `${rest}?tags=${dataTags.join(",")}`;
-			}
+		if (contributors && contributors.length === 0) {
+			return "No contributors found";
 		}
 
 		return (
@@ -183,11 +137,9 @@ registerBlockType("wcw/block-contributors", {
 					}
 				/>
 				<br />
-
 				{selectByContributor ? (
 					<React.Fragment>
 						<label>Select contributors</label>
-						{/* TODO - add ids, etc*/}
 						<Select
 							options={contributorOptions}
 							isMulti={true}
@@ -215,11 +167,159 @@ registerBlockType("wcw/block-contributors", {
 						/>
 					</React.Fragment>
 				)}
-
+				<label>Order by:</label>
+				{/* TODO - add ids, etc*/}
+				<SelectControl
+					options={[
+						{
+							value: "date",
+							label: "Newest first",
+						},
+						{
+							value: "title",
+							label: "First name",
+						},
+					]}
+					onChange={(orderby) => {
+						setAttributes({
+							orderby,
+						});
+					}}
+					value={orderby}
+				/>
 				<div data-rest={rest} className={props.className}></div>
 			</React.Fragment>
 		);
-	},
+	}),
+	// // Creates a <p class='wp-block-wcw-block-contributors'></p>.
+	// const { setAttributes } = props;
+	// const {
+	// 	contributorOptions,
+	// 	contributorApiDataFetched,
+	// 	orderby,
+	// 	tagOptions,
+	// 	tagApiDataFetched,
+	// 	selectedContributors,
+	// 	selectedTags,
+	// 	selectByContributor,
+	// } = props.attributes;
+	// let dataContributors = [];
+	// if (selectedContributors) {
+	// 	dataContributors = selectedContributors.map((contributor) => {
+	// 		return contributor.value;
+	// 	});
+	// }
+	// let dataTags = [];
+	// if (selectedTags) {
+	// 	dataTags = selectedTags.map((tag) => {
+	// 		console.log(tag.value);
+	// 		return tag.value;
+	// 	});
+	// }
+	// if (!contributorApiDataFetched) {
+	// 	retrieveContributors().then((c) => {
+	// 		const o = c.map((contrib) => {
+	// 			return {
+	// 				value: contrib.id,
+	// 				label: contrib.title.rendered,
+	// 			};
+	// 		});
+	// 		setAttributes({
+	// 			contributorOptions: [...contributorOptions, ...o],
+	// 			contributorApiDataFetched: true,
+	// 			contributors: c,
+	// 		});
+	// 	});
+	// }
+	// if (!tagApiDataFetched) {
+	// 	retrieveTags().then((t) => {
+	// 		const o = t.map((terg) => {
+	// 			return {
+	// 				value: terg.id,
+	// 				label: terg.name,
+	// 			};
+	// 		});
+	// 		setAttributes({
+	// 			tagOptions: [...tagOptions, ...o],
+	// 			tagApiDataFetched: true,
+	// 			tags: t,
+	// 		});
+	// 	});
+	// }
+	// let rest = `${wcwGlobal.rest}wp/v2/contributor?per_page=100&orderby=${orderby}`;
+	// if (selectByContributor) {
+	// 	if (dataContributors.indexOf(0) === -1 && dataContributors.length > 0) {
+	// 		rest = `${rest}&include=${dataContributors.join(",")}`;
+	// 	}
+	// } else {
+	// 	if (dataTags.indexOf(0) === -1 && dataTags.length > 0) {
+	// 		rest = `${rest}&tags=${dataTags.join(",")}`;
+	// 	}
+	// }
+	// return (
+	// 	<React.Fragment>
+	// 		<label>Select specific contributors (otherwise, select by tags)</label>
+	// 		<br />
+	// 		<FormToggle
+	// 			checked={selectByContributor}
+	// 			onChange={() =>
+	// 				setAttributes({ selectByContributor: !selectByContributor })
+	// 			}
+	// 		/>
+	// 		<br />
+	// 		{selectByContributor ? (
+	// 			<React.Fragment>
+	// 				<label>Select contributors</label>
+	// 				<Select
+	// 					options={contributorOptions}
+	// 					isMulti={true}
+	// 					onChange={(newSelectedContributors) => {
+	// 						setAttributes({
+	// 							selectedContributors: newSelectedContributors,
+	// 						});
+	// 					}}
+	// 					value={selectedContributors}
+	// 				/>
+	// 			</React.Fragment>
+	// 		) : (
+	// 			<React.Fragment>
+	// 				<label>Select tags</label>
+	// 				{/* TODO - add ids, etc*/}
+	// 				<Select
+	// 					options={tagOptions}
+	// 					isMulti={true}
+	// 					value={selectedTags}
+	// 					onChange={(newSelectedTags) => {
+	// 						setAttributes({
+	// 							selectedTags: newSelectedTags,
+	// 						});
+	// 					}}
+	// 				/>
+	// 			</React.Fragment>
+	// 		)}
+	// 		<label>Order by:</label>
+	// 		{/* TODO - add ids, etc*/}
+	// 		<SelectControl
+	// 			options={[
+	// 				{
+	// 					value: "date",
+	// 					label: "Newest first",
+	// 				},
+	// 				{
+	// 					value: "title",
+	// 					label: "First name",
+	// 				},
+	// 			]}
+	// 			onChange={(orderby) => {
+	// 				setAttributes({
+	// 					orderby,
+	// 				});
+	// 			}}
+	// 			value={orderby}
+	// 		/>
+	// 		<div data-rest={rest} className={props.className}></div>
+	// 	</React.Fragment>
+	//);
 
 	/**
 	 * The save function defines the way in which the different attributes should be combined
@@ -234,10 +334,12 @@ registerBlockType("wcw/block-contributors", {
 	 */
 	save: (props) => {
 		const {
+			orderby,
 			selectedContributors,
 			selectedTags,
 			selectByContributor,
 		} = props.attributes;
+
 		let dataContributors = [];
 		if (selectedContributors) {
 			dataContributors = selectedContributors.map((contributor) => {
@@ -252,16 +354,16 @@ registerBlockType("wcw/block-contributors", {
 			});
 		}
 
-		let rest = `${wcwGlobal.rest}wp/v2/contributor`;
+		let rest = `${wcwGlobal.rest}wp/v2/contributor?per_page=100&orderby=${orderby}`;
 
 		if (selectByContributor) {
 			if (dataContributors.indexOf(0) === -1 && dataContributors.length > 0) {
-				rest = `${rest}?include=${dataContributors.join(",")}`;
+				rest = `${rest}&include=${dataContributors.join(",")}`;
 			}
 		} else {
 			if (dataTags.indexOf(0) === -1 && dataTags.length > 0) {
 				console.log(dataTags);
-				rest = `${rest}?tags=${dataTags.join(",")}`;
+				rest = `${rest}&tags=${dataTags.join(",")}`;
 			}
 		}
 
