@@ -13,24 +13,10 @@ import Select from "react-select";
 import { SelectControl } from "@wordpress/components";
 import { FormToggle } from "@wordpress/components";
 import { withSelect } from "@wordpress/data";
+import { ServerSideRender } from "@wordpress/server-side-render";
 
 const { __ } = wp.i18n; // Import __() from wp.i18n
 const { registerBlockType } = wp.blocks; // Import registerBlockType() from wp.blocks
-
-const fetchFromApi = async (url) => {
-	const response = await fetch(url);
-	return response.json();
-};
-
-const retrieveContributors = async () => {
-	const url = `${wcwGlobal.rest}wp/v2/contributor?per_page=100`;
-	return await fetchFromApi(url);
-};
-
-const retrieveTags = async () => {
-	const url = `${wcwGlobal.rest}wp/v2/tags?per_page=100`;
-	return await fetchFromApi(url);
-};
 
 /**
  * Register: aa Gutenberg Block.
@@ -106,25 +92,49 @@ registerBlockType("wcw/block-contributors", {
 	 */
 	edit: withSelect((select) => {
 		return {
-			contributors: select("core").getEntityRecords("postType", "contributor"),
+			contributors: select("core").getEntityRecords("postType", "contributor", {
+				per_page: 100,
+			}),
+			tags: select("core").getEntityRecords("taxonomy", "post_tag", {
+				per_page: 100,
+			}),
 		};
-	})(({ contributors, className, attributes, setAttributes }) => {
+	})(({ contributors, className, attributes, setAttributes, tags }) => {
 		const {
-			contributorOptions,
 			orderby,
-			tagOptions,
 			selectedContributors,
 			selectedTags,
 			selectByContributor,
 		} = attributes;
 
-		if (!contributors) {
+		if (!contributors || !tags) {
 			return "Loading...";
 		}
 
 		if (contributors && contributors.length === 0) {
 			return "No contributors found";
 		}
+
+		const deadUn = [
+			{
+				value: 0,
+				label: "---",
+			},
+		];
+
+		const contributorOptions = contributors.map((contributor) => {
+			return {
+				value: contributor.id,
+				label: contributor.title.rendered,
+			};
+		});
+
+		const tagOptions = tags.map((tag) => {
+			return {
+				value: tag.id,
+				label: tag.name,
+			};
+		});
 
 		return (
 			<React.Fragment>
@@ -141,7 +151,7 @@ registerBlockType("wcw/block-contributors", {
 					<React.Fragment>
 						<label>Select contributors</label>
 						<Select
-							options={contributorOptions}
+							options={[...deadUn, ...contributorOptions]}
 							isMulti={true}
 							onChange={(newSelectedContributors) => {
 								setAttributes({
@@ -156,7 +166,7 @@ registerBlockType("wcw/block-contributors", {
 						<label>Select tags</label>
 						{/* TODO - add ids, etc*/}
 						<Select
-							options={tagOptions}
+							options={[...deadUn, ...tagOptions]}
 							isMulti={true}
 							value={selectedTags}
 							onChange={(newSelectedTags) => {
@@ -187,139 +197,9 @@ registerBlockType("wcw/block-contributors", {
 					}}
 					value={orderby}
 				/>
-				<div data-rest={rest} className={props.className}></div>
 			</React.Fragment>
 		);
 	}),
-	// // Creates a <p class='wp-block-wcw-block-contributors'></p>.
-	// const { setAttributes } = props;
-	// const {
-	// 	contributorOptions,
-	// 	contributorApiDataFetched,
-	// 	orderby,
-	// 	tagOptions,
-	// 	tagApiDataFetched,
-	// 	selectedContributors,
-	// 	selectedTags,
-	// 	selectByContributor,
-	// } = props.attributes;
-	// let dataContributors = [];
-	// if (selectedContributors) {
-	// 	dataContributors = selectedContributors.map((contributor) => {
-	// 		return contributor.value;
-	// 	});
-	// }
-	// let dataTags = [];
-	// if (selectedTags) {
-	// 	dataTags = selectedTags.map((tag) => {
-	// 		console.log(tag.value);
-	// 		return tag.value;
-	// 	});
-	// }
-	// if (!contributorApiDataFetched) {
-	// 	retrieveContributors().then((c) => {
-	// 		const o = c.map((contrib) => {
-	// 			return {
-	// 				value: contrib.id,
-	// 				label: contrib.title.rendered,
-	// 			};
-	// 		});
-	// 		setAttributes({
-	// 			contributorOptions: [...contributorOptions, ...o],
-	// 			contributorApiDataFetched: true,
-	// 			contributors: c,
-	// 		});
-	// 	});
-	// }
-	// if (!tagApiDataFetched) {
-	// 	retrieveTags().then((t) => {
-	// 		const o = t.map((terg) => {
-	// 			return {
-	// 				value: terg.id,
-	// 				label: terg.name,
-	// 			};
-	// 		});
-	// 		setAttributes({
-	// 			tagOptions: [...tagOptions, ...o],
-	// 			tagApiDataFetched: true,
-	// 			tags: t,
-	// 		});
-	// 	});
-	// }
-	// let rest = `${wcwGlobal.rest}wp/v2/contributor?per_page=100&orderby=${orderby}`;
-	// if (selectByContributor) {
-	// 	if (dataContributors.indexOf(0) === -1 && dataContributors.length > 0) {
-	// 		rest = `${rest}&include=${dataContributors.join(",")}`;
-	// 	}
-	// } else {
-	// 	if (dataTags.indexOf(0) === -1 && dataTags.length > 0) {
-	// 		rest = `${rest}&tags=${dataTags.join(",")}`;
-	// 	}
-	// }
-	// return (
-	// 	<React.Fragment>
-	// 		<label>Select specific contributors (otherwise, select by tags)</label>
-	// 		<br />
-	// 		<FormToggle
-	// 			checked={selectByContributor}
-	// 			onChange={() =>
-	// 				setAttributes({ selectByContributor: !selectByContributor })
-	// 			}
-	// 		/>
-	// 		<br />
-	// 		{selectByContributor ? (
-	// 			<React.Fragment>
-	// 				<label>Select contributors</label>
-	// 				<Select
-	// 					options={contributorOptions}
-	// 					isMulti={true}
-	// 					onChange={(newSelectedContributors) => {
-	// 						setAttributes({
-	// 							selectedContributors: newSelectedContributors,
-	// 						});
-	// 					}}
-	// 					value={selectedContributors}
-	// 				/>
-	// 			</React.Fragment>
-	// 		) : (
-	// 			<React.Fragment>
-	// 				<label>Select tags</label>
-	// 				{/* TODO - add ids, etc*/}
-	// 				<Select
-	// 					options={tagOptions}
-	// 					isMulti={true}
-	// 					value={selectedTags}
-	// 					onChange={(newSelectedTags) => {
-	// 						setAttributes({
-	// 							selectedTags: newSelectedTags,
-	// 						});
-	// 					}}
-	// 				/>
-	// 			</React.Fragment>
-	// 		)}
-	// 		<label>Order by:</label>
-	// 		{/* TODO - add ids, etc*/}
-	// 		<SelectControl
-	// 			options={[
-	// 				{
-	// 					value: "date",
-	// 					label: "Newest first",
-	// 				},
-	// 				{
-	// 					value: "title",
-	// 					label: "First name",
-	// 				},
-	// 			]}
-	// 			onChange={(orderby) => {
-	// 				setAttributes({
-	// 					orderby,
-	// 				});
-	// 			}}
-	// 			value={orderby}
-	// 		/>
-	// 		<div data-rest={rest} className={props.className}></div>
-	// 	</React.Fragment>
-	//);
 
 	/**
 	 * The save function defines the way in which the different attributes should be combined
@@ -333,40 +213,6 @@ registerBlockType("wcw/block-contributors", {
 	 * @returns {Mixed} JSX Frontend HTML.
 	 */
 	save: (props) => {
-		const {
-			orderby,
-			selectedContributors,
-			selectedTags,
-			selectByContributor,
-		} = props.attributes;
-
-		let dataContributors = [];
-		if (selectedContributors) {
-			dataContributors = selectedContributors.map((contributor) => {
-				return contributor.value;
-			});
-		}
-
-		let dataTags = [];
-		if (selectedTags) {
-			dataTags = selectedTags.map((tag) => {
-				return tag.value;
-			});
-		}
-
-		let rest = `${wcwGlobal.rest}wp/v2/contributor?per_page=100&orderby=${orderby}`;
-
-		if (selectByContributor) {
-			if (dataContributors.indexOf(0) === -1 && dataContributors.length > 0) {
-				rest = `${rest}&include=${dataContributors.join(",")}`;
-			}
-		} else {
-			if (dataTags.indexOf(0) === -1 && dataTags.length > 0) {
-				console.log(dataTags);
-				rest = `${rest}&tags=${dataTags.join(",")}`;
-			}
-		}
-
-		return <div data-rest={rest} className={props.className}></div>;
+		return null;
 	},
 });

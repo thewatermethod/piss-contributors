@@ -59,8 +59,7 @@ function contributors_wcw_block_assets() { // phpcs:ignore
 		'wcwGlobal', // Array containing dynamic data for a JS Global.
 		[
 			'pluginDirPath' => plugin_dir_path( __DIR__ ),
-			'pluginDirUrl'  => plugin_dir_url( __DIR__ ),
-			'rest'=> rest_url()
+			'pluginDirUrl'  => plugin_dir_url( __DIR__ ),		
 			// Add more data here that you want to access from `wcwGlobal` object.
 		]
 	);
