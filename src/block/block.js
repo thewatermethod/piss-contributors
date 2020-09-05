@@ -13,7 +13,7 @@ import Select from "react-select";
 import { SelectControl } from "@wordpress/components";
 import { FormToggle } from "@wordpress/components";
 import { withSelect } from "@wordpress/data";
-import { ServerSideRender } from "@wordpress/server-side-render";
+import ServerSideRender from "@wordpress/server-side-render";
 
 const { __ } = wp.i18n; // Import __() from wp.i18n
 const { registerBlockType } = wp.blocks; // Import registerBlockType() from wp.blocks
@@ -37,18 +37,6 @@ registerBlockType("wcw/block-contributors", {
 	icon: "groups", // Block icon from Dashicons → https://developer.wordpress.org/resource/dashicons/.
 	category: "common", // Block category — Group blocks together based on common traits E.g. common, formatting, layout widgets, embed.
 	attributes: {
-		contributorApiDataFetched: {
-			type: "boolean",
-			default: false,
-		},
-		contributorOptions: {
-			type: "array",
-			default: [{ value: 0, label: "Show All" }],
-		},
-		contributors: {
-			type: "array",
-			default: [],
-		},
 		orderby: {
 			type: "array",
 			default: "title",
@@ -64,19 +52,6 @@ registerBlockType("wcw/block-contributors", {
 		selectByContributor: {
 			type: "boolean",
 			default: false,
-		},
-		tags: {
-			type: "array",
-			default: [],
-		},
-		tagApiDataFetched: {
-			type: "boolean",
-			default: false,
-		},
-
-		tagOptions: {
-			type: "array",
-			default: [{ value: 0, label: "Show All" }],
 		},
 	},
 	/**
@@ -196,6 +171,16 @@ registerBlockType("wcw/block-contributors", {
 						});
 					}}
 					value={orderby}
+				/>
+
+				<ServerSideRender
+					block="wcw/block-contributors"
+					attributes={{
+						orderby,
+						selectedTags,
+						selectedContributors,
+						selectByContributor,
+					}}
 				/>
 			</React.Fragment>
 		);

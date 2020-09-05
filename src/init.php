@@ -13,6 +13,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+if ( ! function_exists('write_log')) {
+	function write_log ( $log )  {
+	   if ( is_array( $log ) || is_object( $log ) ) {
+		  error_log( print_r( $log, true ) );
+	   } else {
+		  error_log( $log );
+	   }
+	}
+ }
+
 /**
  * Enqueue Gutenberg block assets for both frontend + backend.
  *
@@ -76,15 +87,75 @@ function contributors_wcw_block_assets() { // phpcs:ignore
 	 */
 	register_block_type(
 		'wcw/block-contributors', array(
-			// Enqueue blocks.style.build.css on both frontend & backend.
-			'style'         => 'contributors-wcw-style-css',
-			// Enqueue blocks.build.js in the editor only.
-			'editor_script' => 'contributors-wcw-block-js',
-			// Enqueue blocks.editor.build.css in the editor only.
+			'style'         => 'contributors-wcw-style-css',	
+			'editor_script' => 'contributors-wcw-block-js',	
 			'editor_style'  => 'contributors-wcw-block-editor-css',
+			'attributes' => array(         			
+				'orderby'=> array(
+					'type' => 'string',
+					'default'=> 'title',
+				),
+				'selectedTags' => array(
+					'type' => 'array',			
+				),
+				'selectedContributors' => array(
+					'type'=> 'array',				
+				),
+				'selectByContributor' => array(
+					'type' => "boolean",
+					'default'=> false,
+				),				
+			 ),
+		   'render_callback' => 'contributors_wcw_render_block'
 		)
 	);
 }
+
+
+function contributors_wcw_render_block($attributes) {
+	
+	$tags = array();
+
+
+	if( isset($attributes['selectedTags']) && count($attributes['selectedTags'])) {
+		foreach ($attributes['selectedTags'] as $key => $value) {
+			array_push($tags,$value['value']);		
+		}
+	}
+
+
+	$args = array(
+		'post_type' => 'contributor',
+		'orderby' => $attributes['orderby'],
+		'tag_id' => implode(',', $tags ),
+		'numberposts' => -1	
+	); 
+
+	$contributors = get_posts( $args );
+
+	write_log(implode(',', $tags ));
+
+	$html = '';
+
+	foreach ($contributors as $contributor) {		
+		$html .= '<div class="contributor">';
+			$html .= '<div class="wp-block-media-text alignwide is-stacked-on-mobile">';
+				$html .= '<figure class="wp-block-media-text__media">';
+					$html .= '<img src="' . get_the_post_thumbnail_url($contributor->ID, 'medium' ) . '" alt="" >';
+				$html .= '</figure>';
+				$html .= '<div class="wp-block-media-text__content">';
+					$html .= '<p class="has-large-font-size">'. $contributor->post_title . '</p>';
+					$html .= '<p>' . $contributor->post_content. '</p>';
+				$html .= '</div>';
+			$html .= '</div>';
+		$html .= '</div>';
+	}
+
+	return '<div class="wp-block-wcw-block-contributors contributor-grid">'.$html.'</div>';
+
+	
+}
+
 
 // Hook: Block assets.
 add_action( 'init', 'contributors_wcw_block_assets' );

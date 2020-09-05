@@ -1,14 +1,14 @@
-/**
- * #.# Styles
- *
- * CSS for both Frontend+Backend.
- */
+@media (min-width: 1200px) {
+	.contributor-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+	}
+}
 
-.wp-block-cgb-block-contributors  {
-  background: $red;
-  border: 0.2rem solid $black;
-  color: $black;
-  margin: 0 auto;
-  max-width: 740px;
-  padding: 2rem;
+.wp-block-wcw-block-contributors .wp-block-media-text__media {
+	text-align: center;
+}
+
+.wp-block-wcw-block-contributors .wp-block-media-text__media img {
+	max-width: 250px;
 }
