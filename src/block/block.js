@@ -18,6 +18,8 @@ import ServerSideRender from "@wordpress/server-side-render";
 const { __ } = wp.i18n; // Import __() from wp.i18n
 const { registerBlockType } = wp.blocks; // Import registerBlockType() from wp.blocks
 
+import { deprecated } from "./deprecated";
+
 /**
  * Register: aa Gutenberg Block.
  *
@@ -54,6 +56,9 @@ registerBlockType("wcw/block-contributors", {
 			default: false,
 		},
 	},
+
+	deprecated,
+
 	/**
 	 * The edit function describes the structure of your block in the context of the editor.
 	 * This represents what the editor will render when the block is used.
